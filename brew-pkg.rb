@@ -36,7 +36,9 @@ Options:
       'org.homebrew'
     end
 
+    ohai "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
     f = Formula.factory ARGV.last
+    ohai "DEBUG: formula #{f}" if ARGV.include? '--debug'
     # raise FormulaUnspecifiedError if formulae.empty?
     # formulae.each do |f|
     name = f.name
@@ -57,36 +59,28 @@ Options:
     FileUtils.mkdir_p staging_root
 
 
-    pkgs = [f]
+    pkgs = [ARGV.last] # was [f] but this didn't allow taps with conflicting formula names.
+    ohai "DEBUG: formula #{pkgs}" if ARGV.include? '--debug'
 
     # Add deps if we specified --with-deps
     pkgs += f.recursive_dependencies if ARGV.with_deps?
 
     pkgs.each do |pkg|
+      ohai "DEBUG: formula dependency #{pkg}" if ARGV.include? '--debug'
       formula = Formula.factory(pkg.to_s)
       dep_version = formula.version.to_s
       dep_version += "_#{formula.revision}" if formula.revision.to_s != '0'
 
-
       ohai "Staging formula #{formula.name}"
       # Get all directories for this keg, rsync to the staging root
-
       if File.exists?(File.join(HOMEBREW_CELLAR, formula.name, dep_version))
-
         dirs = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version)).children.select { |c| c.directory? }.collect { |p| p.to_s }
-
-
         dirs.each {|d| safe_system "rsync", "-a", "#{d}", "#{staging_root}/" }
-
-
         if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not ARGV.include? '--without-kegs'
-
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
-
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
         end
-
       end
 
       # Write out a LaunchDaemon plist if we have one

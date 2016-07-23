@@ -24,7 +24,7 @@ It can also automatically include the formula's dependencies:
 ==> Staging formula faac
 ==> Staging formula lame
 ==> Staging formula xvid
-==> Building package ffmpeg-1.1.pkg</pre></code>
+==> Building package ffmpeg-3.1.1.pkg</pre></code>
 
 By default behaviour brew pkg include all package kegs located in /usr/local/Cellar/packagename. If you need to exclude it, specify option --without-kegs
 
@@ -32,7 +32,7 @@ By default behaviour brew pkg include all package kegs located in /usr/local/Cel
 
 brew-pkg is available from my [formulae tap](https://github.com/timsutton/homebrew-formulae). Add the tap:
 
-`brew tap timsutton/formulae`
+`brew tap danielbair/formulae`
 
 Then install as any other formula:
 

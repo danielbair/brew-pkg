@@ -13,21 +13,25 @@ end
 module Homebrew extend self
   def pkg
     unpack_usage = <<-EOS
-Usage: brew pkg [--identifier-prefix] [--with-deps] [--without-kegs] formula
+Usage: brew pkg [options] formula
 
 Build an OS X installer package from a formula. It must be already
 installed; 'brew pkg' doesn't handle this for you automatically. The
 '--identifier-prefix' option is strongly recommended in order to follow
-the conventions of OS X installer packages.
+the conventions of OS X installer packages (Default 'org.homebrew').
 
 Options:
   --identifier-prefix     set a custom identifier prefix to be prepended
                           to the built package's identifier, ie. 'org.nagios'
                           makes a package identifier called 'org.nagios.nrpe'
-  --with-deps             include all the package's dependencies in the built package
-  --without-kegs          exclude package contents at /usr/local/Cellar/packagename
-  --scripts               set the path to custom preinstall and postinstall scripts
-    EOS
+  --with-deps             include all the package's dependencies in the build
+  --without-kegs          exclude contents at /usr/local/Cellar/packagename
+  --scripts               custom preinstall and postinstall scripts folder
+  --preinstall-script     custom preinstall script file
+  --postinstall-script    custom postinstall script file
+  --debug                 print extra debug information
+
+EOS
 
     abort unpack_usage if ARGV.empty?
     identifier_prefix = if ARGV.include? '--identifier-prefix'
@@ -36,9 +40,8 @@ Options:
       'org.homebrew'
     end
 
-    ohai "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
+    printf "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
     f = Formula.factory ARGV.last
-    ohai "DEBUG: formula #{f}" if ARGV.include? '--debug'
     # raise FormulaUnspecifiedError if formulae.empty?
     # formulae.each do |f|
     name = f.name
@@ -60,13 +63,12 @@ Options:
 
 
     pkgs = [ARGV.last] # was [f] but this didn't allow taps with conflicting formula names.
-    ohai "DEBUG: formula #{pkgs}" if ARGV.include? '--debug'
 
     # Add deps if we specified --with-deps
     pkgs += f.recursive_dependencies if ARGV.with_deps?
 
     pkgs.each do |pkg|
-      ohai "DEBUG: formula dependency #{pkg}" if ARGV.include? '--debug'
+      printf "DEBUG: packaging formula #{pkg}" if ARGV.include? '--debug'
       formula = Formula.factory(pkg.to_s)
       dep_version = formula.version.to_s
       dep_version += "_#{formula.revision}" if formula.revision.to_s != '0'
@@ -114,6 +116,33 @@ Options:
       end
       if not found_scripts
         opoo "No scripts found in #{scripts_path}"
+      end
+    end
+
+    # Add scripts if we specified 
+    found_scripts = false
+    if ARGV.include? '--preinstall-script'
+      preinstall_script = ARGV.next
+      if File.exists?(preinstall_script)
+        scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
+        pre = File.join(scripts_path,"preinstall")
+        safe_system "cp", "-a", "#{preinstall_script}", "#{pre}"
+        File.chmod(0755, pre)
+        found_scripts = true
+        ohai "Adding preinstall script"
+      end
+    end
+    if ARGV.include? '--postinstall-script'
+      postinstall_script = ARGV.next
+      if File.exists?(postinstall_script)
+        if not found_scripts
+          scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
+	end
+        post = File.join(scripts_path,"postinstall")
+        safe_system "cp", "-a", "#{postinstall_script}", "#{post}"
+        File.chmod(0755, post)
+        found_scripts = true
+        ohai "Adding postinstall script"
       end
     end
 

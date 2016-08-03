@@ -41,7 +41,7 @@ EOS
     end
 
     printf "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
-    f = Formula.factory ARGV.last
+    f = Formulary.factory ARGV.last
     # raise FormulaUnspecifiedError if formulae.empty?
     # formulae.each do |f|
     name = f.name
@@ -69,7 +69,7 @@ EOS
 
     pkgs.each do |pkg|
       printf "DEBUG: packaging formula #{pkg}" if ARGV.include? '--debug'
-      formula = Formula.factory(pkg.to_s)
+      formula = Formulary.factory(pkg.to_s)
       dep_version = formula.version.to_s
       dep_version += "_#{formula.revision}" if formula.revision.to_s != '0'
 

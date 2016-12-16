@@ -80,8 +80,8 @@ EOS
       ohai "Staging formula #{formula.name}"
       # Get all directories for this keg, rsync to the staging root
       if File.exists?(File.join(HOMEBREW_CELLAR, formula.name, dep_version))
-        dirs = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version)).children.select { |c| c.directory? }.collect { |p| p.to_s }
-        # dirs = ["etc", "bin", "sbin", "include", "share", "lib", "Frameworks"]
+        # dirs = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version)).children.select { |c| c.directory? }.collect { |p| p.to_s }
+        dirs = ["etc", "bin", "sbin", "include", "share", "lib", "Frameworks"]
         # dirs.each {|d| safe_system "rsync", "-a", "#{d}", "#{staging_root}/" }
         dirs.each do |d|
           sourcedir = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version, d))

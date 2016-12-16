@@ -2,6 +2,7 @@
 require 'formula'
 require 'optparse'
 require 'tmpdir'
+require 'ostruct'
 
 module HomebrewArgvExtension extend self
   def with_deps?
@@ -26,11 +27,13 @@ Options:
                           makes a package identifier called 'org.nagios.nrpe'
   --with-deps             include all the package's dependencies in the build
   --without-kegs          exclude contents at /usr/local/Cellar/packagename
-  --scripts               custom preinstall and postinstall scripts folder
+  --without-opt           exclude the link in /usr/local/opt
+  --install-location      custom install location for package
   --preinstall-script     custom preinstall script file
   --postinstall-script    custom postinstall script file
+  --scripts               custom preinstall and postinstall scripts folder
+  --pkgvers               set the version string in the resulting .pkg file
   --debug                 print extra debug information
-  --install-location      Install location for package
 
 EOS
 
@@ -78,11 +81,24 @@ EOS
       # Get all directories for this keg, rsync to the staging root
       if File.exists?(File.join(HOMEBREW_CELLAR, formula.name, dep_version))
         dirs = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version)).children.select { |c| c.directory? }.collect { |p| p.to_s }
-        dirs.each {|d| safe_system "rsync", "-a", "#{d}", "#{staging_root}/" }
+        # dirs = ["etc", "bin", "sbin", "include", "share", "lib", "Frameworks"]
+        # dirs.each {|d| safe_system "rsync", "-a", "#{d}", "#{staging_root}/" }
+        dirs.each do |d|
+          sourcedir = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version, d))
+          if File.exists?(sourcedir)
+            ohai "rsyncing #{sourcedir} to #{staging_root}"
+            safe_system "rsync", "-a", "#{sourcedir}", "#{staging_root}/"
+          end
+        end
         if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not ARGV.include? '--without-kegs'
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
+        end
+        if File.exists?("/usr/local/opt/#{formula.name}") and not ARGV.include? '--without-opt' and not ARGV.include? '--without-kegs'
+          ohai "Staging link in #{staging_root}/opt"
+          FileUtils.mkdir_p "#{staging_root}/opt"
+          safe_system "rsync", "-a", "/usr/local/opt/#{formula.name}", "#{staging_root}/opt"
         end
       end
 
@@ -159,12 +175,19 @@ EOS
        end
     end
 
-    # Custom ownership
+    # Custom install location
     found_installdir = false
     if ARGV.include? '--install-location'
       install_dir = ARGV.next
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
+    end
+
+    found_pkgvers = false
+    if ARGV.include? '--pkgvers'
+      version = ARGV.next
+      found_pkgvers = true
+      ohai "Setting pkgbuild option --version with value #{version}"
     end
 
     # Build it
@@ -192,7 +215,7 @@ EOS
     args << "#{pkgfile}"
     safe_system "pkgbuild", *args
 
-    FileUtils.rm_rf pkg_root
+    #FileUtils.rm_rf pkg_root
   end
 end
 

@@ -30,6 +30,7 @@ Options:
   --preinstall-script     custom preinstall script file
   --postinstall-script    custom postinstall script file
   --debug                 print extra debug information
+  --install-location      Install location for package
 
 EOS
 
@@ -158,6 +159,14 @@ EOS
        end
     end
 
+    # Custom ownership
+    found_installdir = false
+    if ARGV.include? '--install-location'
+      install_dir = ARGV.next
+      found_installdir = true
+        ohai "Setting install directory option --install-location with value #{install_dir}"
+    end
+
     # Build it
     pkgfile = "#{name}-#{version}.pkg"
     ohai "Building package #{pkgfile}"
@@ -175,6 +184,11 @@ EOS
       args << "--ownership"
       args << custom_ownership 
     end
+    if found_installdir
+      args << "--install-location"
+      args << install_dir 
+    end
+
     args << "#{pkgfile}"
     safe_system "pkgbuild", *args
 

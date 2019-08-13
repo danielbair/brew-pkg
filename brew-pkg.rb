@@ -39,7 +39,7 @@ EOS
 
     abort unpack_usage if ARGV.empty?
     identifier_prefix = if ARGV.include? '--identifier-prefix'
-      ARGV.next.chomp(".")
+      ARGV.value("identifier-prefix")
     else
       'org.homebrew'
     end
@@ -116,7 +116,7 @@ EOS
     # Add scripts if we specified --scripts 
     found_scripts = false
     if ARGV.include? '--scripts'
-      scripts_path = ARGV.next
+      scripts_path = ARGV.value("scripts")
       if File.directory?(scripts_path)
         pre = File.join(scripts_path,"preinstall")
         post = File.join(scripts_path,"postinstall")
@@ -139,7 +139,7 @@ EOS
     # Add scripts if we specified 
     found_scripts = false
     if ARGV.include? '--preinstall-script'
-      preinstall_script = ARGV.next
+      preinstall_script = ARGV.value("preinstall-script")
       if File.exists?(preinstall_script)
         scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
         pre = File.join(scripts_path,"preinstall")
@@ -150,7 +150,7 @@ EOS
       end
     end
     if ARGV.include? '--postinstall-script'
-      postinstall_script = ARGV.next
+      postinstall_script = ARGV.value("postinstall-script")
       if File.exists?(postinstall_script)
         if not found_scripts
           scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
@@ -166,7 +166,7 @@ EOS
     # Custom ownership
     found_ownership = false
     if ARGV.include? '--ownership'
-      custom_ownership = ARGV.next
+      custom_ownership = ARGV.value("ownership")
        if ['recommended', 'preserve', 'preserve-other'].include? custom_ownership
         found_ownership = true
         ohai "Setting pkgbuild option --ownership with value #{custom_ownership}"
@@ -178,14 +178,14 @@ EOS
     # Custom install location
     found_installdir = false
     if ARGV.include? '--install-location'
-      install_dir = ARGV.next
+      install_dir = ARGV.value("install-location")
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
     end
 
     found_pkgvers = false
     if ARGV.include? '--pkgvers'
-      version = ARGV.next
+      version = ARGV.value("pkgvers")
       found_pkgvers = true
       ohai "Setting pkgbuild option --version with value #{version}"
     end

@@ -38,10 +38,9 @@ Options:
 EOS
 
     abort unpack_usage if ARGV.empty?
-    identifier_prefix = if ARGV.include? '--identifier-prefix'
-      ARGV.next.chomp(".")
-    else
-      'org.homebrew'
+    identifier_prefix = 'org.homebrew'
+    if (ARGV.value("identifier-prefix") != nil)
+      identifier_prefix = ARGV.value("identifier-prefix")
     end
 
     printf "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
@@ -115,8 +114,8 @@ EOS
 
     # Add scripts if we specified --scripts 
     found_scripts = false
-    if ARGV.include? '--scripts'
-      scripts_path = ARGV.next
+    if (ARGV.value("scripts") != nil)
+      scripts_path = ARGV.value("scripts")
       if File.directory?(scripts_path)
         pre = File.join(scripts_path,"preinstall")
         post = File.join(scripts_path,"postinstall")
@@ -138,8 +137,8 @@ EOS
 
     # Add scripts if we specified 
     found_scripts = false
-    if ARGV.include? '--preinstall-script'
-      preinstall_script = ARGV.next
+    if (ARGV.value("preinstall-script") != nil)
+      preinstall_script = ARGV.value("preinstall-script")
       if File.exists?(preinstall_script)
         scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
         pre = File.join(scripts_path,"preinstall")
@@ -149,8 +148,8 @@ EOS
         ohai "Adding preinstall script"
       end
     end
-    if ARGV.include? '--postinstall-script'
-      postinstall_script = ARGV.next
+    if (ARGV.value("postinstall-script") != nil)
+      postinstall_script = ARGV.value("postinstall-script")
       if File.exists?(postinstall_script)
         if not found_scripts
           scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
@@ -165,8 +164,8 @@ EOS
 
     # Custom ownership
     found_ownership = false
-    if ARGV.include? '--ownership'
-      custom_ownership = ARGV.next
+    if (ARGV.value("ownership") != nil)
+      custom_ownership = ARGV.value("ownership")
        if ['recommended', 'preserve', 'preserve-other'].include? custom_ownership
         found_ownership = true
         ohai "Setting pkgbuild option --ownership with value #{custom_ownership}"
@@ -177,15 +176,15 @@ EOS
 
     # Custom install location
     found_installdir = false
-    if ARGV.include? '--install-location'
-      install_dir = ARGV.next
+    if (ARGV.value("install-location") != nil)
+      install_dir = ARGV.value("install-location")
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
     end
 
     found_pkgvers = false
-    if ARGV.include? '--pkgvers'
-      version = ARGV.next
+    if (ARGV.value("pkgvers") != nil)
+      version = ARGV.value("pkgvers")
       found_pkgvers = true
       ohai "Setting pkgbuild option --version with value #{version}"
     end

@@ -1,49 +1,92 @@
-# Builds an OS X installer package from an installed formula.
+#: Usage: brew pkg [options] formula
+#:
+#: Build an OS X installer package from a formula. It must be already
+#: installed; 'brew pkg' doesn't handle this for you automatically. The
+#: '--identifier-prefix' option is strongly recommended in order to follow
+#: the conventions of OS X installer packages (Default 'org.homebrew').
+#:
+#: Options:
+#:  --identifier-prefix     set a custom identifier prefix to be prepended
+#:                          to the built package's identifier, ie. 'org.nagios'
+#:                          makes a package identifier called 'org.nagios.nrpe'
+#:  --with-deps             include all the package's dependencies in the build
+#:  --without-kegs          exclude contents at /usr/local/Cellar/packagename
+#:  --without-opt           exclude the link in /usr/local/opt
+#:  --install-location      custom install location for package
+#:  --preinstall-script     custom preinstall script file
+#:  --postinstall-script    custom postinstall script file
+#:  --scripts               custom preinstall and postinstall scripts folder
+#:  --pkgvers               set the version string in the resulting .pkg file
+#:  --debug                 print extra debug information
+
 require 'formula'
+require 'formulary'
+require 'dependencies'
+require 'shellwords'
+require "cli/parser"
+require 'cmd/deps'
 require 'optparse'
-require 'tmpdir'
 require 'ostruct'
+require "cleanup"
+require 'tmpdir'
+require 'set'
+require 'pp'
 
-module HomebrewArgvExtension extend self
-  def with_deps?
-    flag? '--with-deps'
+module Homebrew
+  module_function
+
+  extend self
+
+  def pkg_args
+    Homebrew::CLI::Parser.new do
+      usage_banner <<~EOS
+      `pkg` [<options>] <formula>
+
+      Build an OS X installer package from a formula. It must be already
+      installed; 'brew pkg' doesn't handle this for you automatically. The
+      '--identifier-prefix' option is strongly recommended in order to follow
+      the conventions of OS X installer packages (Default 'org.homebrew').
+      EOS
+      flag "--identifier-prefix=",
+             description: "set a custom identifier prefix to be prepended"\
+                          "to the built package's identifier, ie. 'org.nagios'"\
+                          "makes a package identifier called 'org.nagios.nrpe'"
+      switch "--with-deps",
+             description: "include all the package's dependencies in the build"
+      switch "--without-kegs",
+             description: "exclude contents at /usr/local/Cellar/packagename"
+      switch "--without-opt",
+             description: "exclude the link in /usr/local/opt"
+      flag "--install-location=",
+             description: "custom install location for package"
+      flag "--preinstall-script=",
+             description: "custom preinstall script file"
+      flag "--postinstall-script=",
+             description: "custom postinstall script file"
+      flag "--scripts=",
+             description: "custom preinstall and postinstall scripts folder"
+      flag "--pkgvers=",
+             description: "set the version string in the resulting .pkg file"
+      switch "--debug",
+             description: "print extra debug information"
+      formula_options
+      min_named :formula
+    end
   end
-end
 
-# cribbed Homebrew module code from brew-unpack.rb
-module Homebrew extend self
   def pkg
-    unpack_usage = <<-EOS
-Usage: brew pkg [options] formula
+    pkg_args.parse
 
-Build an OS X installer package from a formula. It must be already
-installed; 'brew pkg' doesn't handle this for you automatically. The
-'--identifier-prefix' option is strongly recommended in order to follow
-the conventions of OS X installer packages (Default 'org.homebrew').
+    printf "DEBUG: args...\n" if ARGV.include? '--debug'
+    pp ARGV if ARGV.include? '--debug'
 
-Options:
-  --identifier-prefix     set a custom identifier prefix to be prepended
-                          to the built package's identifier, ie. 'org.nagios'
-                          makes a package identifier called 'org.nagios.nrpe'
-  --with-deps             include all the package's dependencies in the build
-  --without-kegs          exclude contents at /usr/local/Cellar/packagename
-  --without-opt           exclude the link in /usr/local/opt
-  --install-location      custom install location for package
-  --preinstall-script     custom preinstall script file
-  --postinstall-script    custom postinstall script file
-  --scripts               custom preinstall and postinstall scripts folder
-  --pkgvers               set the version string in the resulting .pkg file
-  --debug                 print extra debug information
-
-EOS
-
-    abort unpack_usage if ARGV.empty?
     identifier_prefix = 'org.homebrew'
-    if (ARGV.value("identifier-prefix") != nil)
-      identifier_prefix = ARGV.value("identifier-prefix")
+    if (args.identifier_prefix != nil)
+      printf "DEBUG: --identifier-prefix=#{args.identifier_prefix}\n" if ARGV.include? '--debug'
+      identifier_prefix = args.identifier_prefix
     end
 
-    printf "DEBUG: brew pkg #{ARGV.last}" if ARGV.include? '--debug'
+    printf "DEBUG: brew pkg #{ARGV.last}\n" if ARGV.include? '--debug'
     f = Formulary.factory ARGV.last
     # raise FormulaUnspecifiedError if formulae.empty?
     # formulae.each do |f|
@@ -53,7 +96,7 @@ EOS
     version += "_#{f.revision}" if f.revision.to_s != '0'
 
     # Make sure it's installed first
-    if not f.installed?
+    if not f.latest_version_installed?
       onoe "#{f.name} is not installed. First install it with 'brew install #{f.name}'."
       abort
     end
@@ -68,10 +111,10 @@ EOS
     pkgs = [ARGV.last] # was [f] but this didn't allow taps with conflicting formula names.
 
     # Add deps if we specified --with-deps
-    pkgs += f.recursive_dependencies if ARGV.with_deps?
+    pkgs += f.recursive_dependencies if args.with_deps?
 
     pkgs.each do |pkg|
-      printf "DEBUG: packaging formula #{pkg}" if ARGV.include? '--debug'
+      printf "DEBUG: packaging formula #{pkg}\n" if ARGV.include? '--debug'
       formula = Formulary.factory(pkg.to_s)
       dep_version = formula.version.to_s
       dep_version += "_#{formula.revision}" if formula.revision.to_s != '0'
@@ -114,8 +157,9 @@ EOS
 
     # Add scripts if we specified --scripts 
     found_scripts = false
-    if (ARGV.value("scripts") != nil)
-      scripts_path = ARGV.value("scripts")
+    if (args.scripts != nil)
+      printf "DEBUG: --scripts=#{args.scripts}\n" if ARGV.include? '--debug'
+      scripts_path = args.scripts
       if File.directory?(scripts_path)
         pre = File.join(scripts_path,"preinstall")
         post = File.join(scripts_path,"postinstall")
@@ -137,8 +181,9 @@ EOS
 
     # Add scripts if we specified 
     found_scripts = false
-    if (ARGV.value("preinstall-script") != nil)
-      preinstall_script = ARGV.value("preinstall-script")
+    if (args.preinstall_script != nil)
+      printf "DEBUG: --preinstall-script=#{args.preinstall_script}\n" if ARGV.include? '--debug'
+      preinstall_script = args.preinstall_script
       if File.exists?(preinstall_script)
         scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
         pre = File.join(scripts_path,"preinstall")
@@ -148,8 +193,9 @@ EOS
         ohai "Adding preinstall script"
       end
     end
-    if (ARGV.value("postinstall-script") != nil)
-      postinstall_script = ARGV.value("postinstall-script")
+    if (args.postinstall_script != nil)
+      printf "DEBUG: --postinstall-script=#{args.postinstall_script}\n" if ARGV.include? '--debug'
+      postinstall_script = args.postinstall_script
       if File.exists?(postinstall_script)
         if not found_scripts
           scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
@@ -164,8 +210,9 @@ EOS
 
     # Custom ownership
     found_ownership = false
-    if (ARGV.value("ownership") != nil)
-      custom_ownership = ARGV.value("ownership")
+    if (args.ownership != nil)
+      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
+      custom_ownership = args.ownership
        if ['recommended', 'preserve', 'preserve-other'].include? custom_ownership
         found_ownership = true
         ohai "Setting pkgbuild option --ownership with value #{custom_ownership}"
@@ -176,15 +223,17 @@ EOS
 
     # Custom install location
     found_installdir = false
-    if (ARGV.value("install-location") != nil)
-      install_dir = ARGV.value("install-location")
+    if (args.install_location != nil)
+      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
+      install_dir = args.install_location
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
     end
 
     found_pkgvers = false
-    if (ARGV.value("pkgvers") != nil)
-      version = ARGV.value("pkgvers")
+    if (args.pkgvers != nil)
+      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
+      version = args.pkgvers
       found_pkgvers = true
       ohai "Setting pkgbuild option --version with value #{version}"
     end
@@ -192,30 +241,31 @@ EOS
     # Build it
     pkgfile = "#{name}-#{version}.pkg"
     ohai "Building package #{pkgfile}"
-    args = [
+    pargs = [
       "--quiet",
       "--root", "#{pkg_root}",
       "--identifier", identifier,
       "--version", version
     ]
     if found_scripts
-      args << "--scripts"
-      args << scripts_path 
+      pargs << "--scripts"
+      pargs << scripts_path 
     end
     if found_ownership
-      args << "--ownership"
-      args << custom_ownership 
+      pargs << "--ownership"
+      pargs << custom_ownership 
     end
     if found_installdir
-      args << "--install-location"
-      args << install_dir 
+      pargs << "--install-location"
+      pargs << install_dir 
     end
 
-    args << "#{pkgfile}"
-    safe_system "pkgbuild", *args
+    pargs << "#{pkgfile}"
+    safe_system "pkgbuild", *pargs
 
     #FileUtils.rm_rf pkg_root
   end
 end
 
 Homebrew.pkg
+exit 0

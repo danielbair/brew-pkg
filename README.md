@@ -30,9 +30,9 @@ By default behaviour brew pkg include all package kegs located in /usr/local/Cel
 
 ## Installing it
 
-brew-pkg is available from my [formulae tap](https://github.com/timsutton/homebrew-formulae). Add the tap:
+brew-pkg is available from my [formulae tap](https://github.com/danielbair/homebrew-pkg). Add the tap:
 
-`brew tap danielbair/formulae`
+`brew tap danielbair/pkg`
 
 Then install as any other formula:
 
@@ -49,4 +49,4 @@ For more information refer to `man pkgbuild` which explains that *`--scripts scr
 
 ## License
 
-brew-pkg is [MIT-licensed](https://github.com/timsutton/brew-pkg/blob/master/LICENSE.md).
+brew-pkg is [MIT-licensed](https://github.com/danielbair/homebrew-pkg/blob/master/LICENSE.md).

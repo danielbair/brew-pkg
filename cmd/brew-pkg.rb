@@ -70,7 +70,7 @@ module Homebrew
              description: "custom preinstall and postinstall scripts folder"
       flag "--pkgvers=",
              description: "set the version string in the resulting .pkg file"
-      switch "--debug",
+      switch :debug,
              description: "print extra debug information"
       formula_options
       min_named :formula

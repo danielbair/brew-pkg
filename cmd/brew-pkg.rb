@@ -274,7 +274,7 @@ module Homebrew
     odebug "DEBUG: pkgbuild #{pargs}" if Homebrew.args.debug?
     safe_system "pkgbuild", *pargs
 
-    #FileUtils.rm_rf pkg_root
+    FileUtils.rm_rf pkg_root if not Homebrew.args.debug?
   end
 end
 

@@ -279,4 +279,3 @@ module Homebrew
 end
 
 Homebrew.pkg
-exit 0

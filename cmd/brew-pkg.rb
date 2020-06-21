@@ -271,7 +271,7 @@ module Homebrew
     end
 
     pargs << "#{pkgfile}"
-    printf "DEBUG: pkgbuild #{*pargs}\n" if ARGV.include? '--debug'
+    printf "DEBUG: pkgbuild #{pargs}\n" if ARGV.include? '--debug'
     safe_system "pkgbuild", *pargs
 
     #FileUtils.rm_rf pkg_root

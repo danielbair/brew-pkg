@@ -114,7 +114,7 @@ module Homebrew
 
     # Add deps if we specified --with-deps
     if args.with_deps?
-      printf "DEBUG: --with-deps" if Homebrew.args.debug?
+      printf "DEBUG: --with-deps\n" if Homebrew.args.debug?
       pkgs += f.recursive_dependencies if args.with_deps?
     end
 
@@ -139,14 +139,14 @@ module Homebrew
         end
         # Add kegs if not specified --without-kegs
         if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not args.without_kegs
-          printf "DEBUG: --without-kegs" if Homebrew.args.debug?
+          printf "DEBUG: --without-kegs\n" if Homebrew.args.debug?
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
         end
         # Add opt dir if not specified --without-opt
         if File.exists?("/usr/local/opt/#{formula.name}") and not args.without_opt and not args.without_kegs
-          printf "DEBUG: --without-opt" if Homebrew.args.debug?
+          printf "DEBUG: --without-opt\n" if Homebrew.args.debug?
           ohai "Staging link in #{staging_root}/opt"
           FileUtils.mkdir_p "#{staging_root}/opt"
           safe_system "rsync", "-a", "/usr/local/opt/#{formula.name}", "#{staging_root}/opt"

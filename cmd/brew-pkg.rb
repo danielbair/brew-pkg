@@ -80,12 +80,12 @@ module Homebrew
   def pkg
     pkg_args.parse
 
-    printf "DEBUG: args...\n" if Homebrew.args.debug?
+    odebug "DEBUG: args..." if Homebrew.args.debug?
     pp ARGV if Homebrew.args.debug?
 
     identifier_prefix = 'org.homebrew'
     if (args.identifier_prefix != nil)
-      printf "DEBUG: --identifier-prefix=#{args.identifier_prefix}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --identifier-prefix=#{args.identifier_prefix}" if Homebrew.args.debug?
       identifier_prefix = args.identifier_prefix
     end
 
@@ -114,12 +114,12 @@ module Homebrew
 
     # Add deps if we specified --with-deps
     if args.with_deps?
-      printf "DEBUG: --with-deps\n" if Homebrew.args.debug?
+      odebug "DEBUG: --with-deps" if Homebrew.args.debug?
       pkgs += f.recursive_dependencies if args.with_deps?
     end
 
     pkgs.each do |pkg|
-      printf "DEBUG: packaging formula #{pkg}\n" if Homebrew.args.debug?
+      odebug "DEBUG: packaging formula #{pkg}" if Homebrew.args.debug?
       formula = Formulary.factory(pkg.to_s)
       dep_version = formula.version.to_s
       dep_version += "_#{formula.revision}" if formula.revision.to_s != '0'
@@ -139,14 +139,14 @@ module Homebrew
         end
         # Add kegs if not specified --without-kegs
         if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not args.without_kegs
-          printf "DEBUG: --without-kegs\n" if Homebrew.args.debug?
+          odebug "DEBUG: --without-kegs" if Homebrew.args.debug?
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
         end
         # Add opt dir if not specified --without-opt
         if File.exists?("/usr/local/opt/#{formula.name}") and not args.without_opt and not args.without_kegs
-          printf "DEBUG: --without-opt\n" if Homebrew.args.debug?
+          odebug "DEBUG: --without-opt" if Homebrew.args.debug?
           ohai "Staging link in #{staging_root}/opt"
           FileUtils.mkdir_p "#{staging_root}/opt"
           safe_system "rsync", "-a", "/usr/local/opt/#{formula.name}", "#{staging_root}/opt"
@@ -167,7 +167,7 @@ module Homebrew
     # Add scripts if specified
     found_scripts = false
     if (args.scripts != nil)
-      printf "DEBUG: --scripts=#{args.scripts}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --scripts=#{args.scripts}" if Homebrew.args.debug?
       scripts_path = args.scripts
       if File.directory?(scripts_path)
         pre = File.join(scripts_path,"preinstall")
@@ -191,7 +191,7 @@ module Homebrew
     # Add preinstall script if specified 
     found_scripts = false
     if (args.preinstall_script != nil)
-      printf "DEBUG: --preinstall-script=#{args.preinstall_script}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --preinstall-script=#{args.preinstall_script}" if Homebrew.args.debug?
       preinstall_script = args.preinstall_script
       if File.exists?(preinstall_script)
         scripts_path = Dir.mktmpdir "#{name}-#{version}-scripts"
@@ -204,7 +204,7 @@ module Homebrew
     end
     # Add postinstall script if specified 
     if (args.postinstall_script != nil)
-      printf "DEBUG: --postinstall-script=#{args.postinstall_script}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --postinstall-script=#{args.postinstall_script}" if Homebrew.args.debug?
       postinstall_script = args.postinstall_script
       if File.exists?(postinstall_script)
         if not found_scripts
@@ -221,7 +221,7 @@ module Homebrew
     # Custom ownership
     found_ownership = false
     if (args.custom_ownership != nil)
-      printf "DEBUG: --custom-ownership=#{args.custom_ownership}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --custom-ownership=#{args.custom_ownership}" if Homebrew.args.debug?
       custom_ownership = args.custom_ownership
        if ['recommended', 'preserve', 'preserve-other'].include? custom_ownership
         found_ownership = true
@@ -234,7 +234,7 @@ module Homebrew
     # Custom install location
     found_installdir = false
     if (args.install_location != nil)
-      printf "DEBUG: --install-location=#{args.install_location}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --install-location=#{args.install_location}" if Homebrew.args.debug?
       install_dir = args.install_location
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
@@ -242,7 +242,7 @@ module Homebrew
 
     found_pkgvers = false
     if (args.pkgvers != nil)
-      printf "DEBUG: --pkgvers=#{args.pkgvers}\n" if Homebrew.args.debug?
+      odebug "DEBUG: --pkgvers=#{args.pkgvers}" if Homebrew.args.debug?
       version = args.pkgvers
       found_pkgvers = true
       ohai "Setting pkgbuild option --version with value #{version}"
@@ -271,7 +271,7 @@ module Homebrew
     end
 
     pargs << "#{pkgfile}"
-    printf "DEBUG: pkgbuild #{pargs}\n" if Homebrew.args.debug?
+    odebug "DEBUG: pkgbuild #{pargs}" if Homebrew.args.debug?
     safe_system "pkgbuild", *pargs
 
     #FileUtils.rm_rf pkg_root

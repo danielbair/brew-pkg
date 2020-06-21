@@ -13,6 +13,7 @@
 #:  --without-kegs          exclude contents at /usr/local/Cellar/packagename
 #:  --without-opt           exclude the link in /usr/local/opt
 #:  --install-location      custom install location for package
+#:  --custom-ownership      custom ownership for package
 #:  --preinstall-script     custom preinstall script file
 #:  --postinstall-script    custom postinstall script file
 #:  --scripts               custom preinstall and postinstall scripts folder
@@ -50,7 +51,7 @@ module Homebrew
       flag "--identifier-prefix=",
              description: "set a custom identifier prefix to be prepended"\
                           "to the built package's identifier, ie. 'org.nagios'"\
-                          "makes a package identifier called 'org.nagios.nrpe'"
+                          "default package identifier is 'org.homebrew'"
       switch "--with-deps",
              description: "include all the package's dependencies in the build"
       switch "--without-kegs",
@@ -59,6 +60,8 @@ module Homebrew
              description: "exclude the link in /usr/local/opt"
       flag "--install-location=",
              description: "custom install location for package"
+      flag "--custom-ownership",
+             description: "custom ownership for package"
       flag "--preinstall-script=",
              description: "custom preinstall script file"
       flag "--postinstall-script=",
@@ -86,7 +89,6 @@ module Homebrew
       identifier_prefix = args.identifier_prefix
     end
 
-    printf "DEBUG: brew pkg #{ARGV.last}\n" if ARGV.include? '--debug'
     f = Formulary.factory ARGV.last
     # raise FormulaUnspecifiedError if formulae.empty?
     # formulae.each do |f|
@@ -108,10 +110,13 @@ module Homebrew
     FileUtils.mkdir_p staging_root
 
 
-    pkgs = [ARGV.last] # was [f] but this didn't allow taps with conflicting formula names.
+    pkgs = [ARGV.last] # NOTE: was [f] but this didn't allow taps with conflicting formula names.
 
     # Add deps if we specified --with-deps
-    pkgs += f.recursive_dependencies if args.with_deps?
+    if args.with_deps?
+      printf "DEBUG: --with-deps" if ARGV.include? '--debug'
+      pkgs += f.recursive_dependencies if args.with_deps?
+    end
 
     pkgs.each do |pkg|
       printf "DEBUG: packaging formula #{pkg}\n" if ARGV.include? '--debug'
@@ -123,8 +128,8 @@ module Homebrew
       # Get all directories for this keg, rsync to the staging root
       if File.exists?(File.join(HOMEBREW_CELLAR, formula.name, dep_version))
         # dirs = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version)).children.select { |c| c.directory? }.collect { |p| p.to_s }
-        dirs = ["etc", "bin", "sbin", "include", "share", "lib", "Frameworks"]
         # dirs.each {|d| safe_system "rsync", "-a", "#{d}", "#{staging_root}/" }
+        dirs = ["etc", "bin", "sbin", "include", "share", "lib", "Frameworks"]
         dirs.each do |d|
           sourcedir = Pathname.new(File.join(HOMEBREW_CELLAR, formula.name, dep_version, d))
           if File.exists?(sourcedir)
@@ -132,12 +137,16 @@ module Homebrew
             safe_system "rsync", "-a", "#{sourcedir}", "#{staging_root}/"
           end
         end
+        # Add kegs if not specified --without-kegs
         if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not ARGV.include? '--without-kegs'
+          printf "DEBUG: --without-kegs" if ARGV.include? '--debug'
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
         end
+        # Add opt dir if not specified --without-opt
         if File.exists?("/usr/local/opt/#{formula.name}") and not ARGV.include? '--without-opt' and not ARGV.include? '--without-kegs'
+          printf "DEBUG: --without-opt" if ARGV.include? '--debug'
           ohai "Staging link in #{staging_root}/opt"
           FileUtils.mkdir_p "#{staging_root}/opt"
           safe_system "rsync", "-a", "/usr/local/opt/#{formula.name}", "#{staging_root}/opt"
@@ -155,7 +164,7 @@ module Homebrew
       end
     end
 
-    # Add scripts if we specified --scripts 
+    # Add scripts if specified
     found_scripts = false
     if (args.scripts != nil)
       printf "DEBUG: --scripts=#{args.scripts}\n" if ARGV.include? '--debug'
@@ -179,7 +188,7 @@ module Homebrew
       end
     end
 
-    # Add scripts if we specified 
+    # Add preinstall script if specified 
     found_scripts = false
     if (args.preinstall_script != nil)
       printf "DEBUG: --preinstall-script=#{args.preinstall_script}\n" if ARGV.include? '--debug'
@@ -193,6 +202,7 @@ module Homebrew
         ohai "Adding preinstall script"
       end
     end
+    # Add postinstall script if specified 
     if (args.postinstall_script != nil)
       printf "DEBUG: --postinstall-script=#{args.postinstall_script}\n" if ARGV.include? '--debug'
       postinstall_script = args.postinstall_script
@@ -210,9 +220,9 @@ module Homebrew
 
     # Custom ownership
     found_ownership = false
-    if (args.ownership != nil)
-      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
-      custom_ownership = args.ownership
+    if (args.custom_ownership != nil)
+      printf "DEBUG: --custom-ownership=#{args.custom_ownership}\n" if ARGV.include? '--debug'
+      custom_ownership = args.custom_ownership
        if ['recommended', 'preserve', 'preserve-other'].include? custom_ownership
         found_ownership = true
         ohai "Setting pkgbuild option --ownership with value #{custom_ownership}"
@@ -224,7 +234,7 @@ module Homebrew
     # Custom install location
     found_installdir = false
     if (args.install_location != nil)
-      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
+      printf "DEBUG: --install-location=#{args.install_location}\n" if ARGV.include? '--debug'
       install_dir = args.install_location
       found_installdir = true
         ohai "Setting install directory option --install-location with value #{install_dir}"
@@ -232,7 +242,7 @@ module Homebrew
 
     found_pkgvers = false
     if (args.pkgvers != nil)
-      printf "DEBUG: --=#{}\n" if ARGV.include? '--debug'
+      printf "DEBUG: --pkgvers=#{args.pkgvers}\n" if ARGV.include? '--debug'
       version = args.pkgvers
       found_pkgvers = true
       ohai "Setting pkgbuild option --version with value #{version}"
@@ -261,6 +271,7 @@ module Homebrew
     end
 
     pargs << "#{pkgfile}"
+    printf "DEBUG: pkgbuild #{*pargs}\n" if ARGV.include? '--debug'
     safe_system "pkgbuild", *pargs
 
     #FileUtils.rm_rf pkg_root

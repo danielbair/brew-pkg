@@ -15,7 +15,7 @@ class BrewPkg < Formula
 
     def caveats
         <<~EOS
-          You can uninstall this formula, as `brew tap danielbair/brew-pkg` is all that's
+          You can uninstall this formula, as `brew tap danielbair/pkg` is all that's
           needed to install brew-pkg and keep it up to date.
         EOS
     end

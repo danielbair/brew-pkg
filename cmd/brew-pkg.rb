@@ -1,14 +1,14 @@
-#: Usage: brew pkg [options] formula
+#:Usage: brew pkg [options] formula
 #:
-#: Build an OS X installer package from a formula. It must be already
-#: installed; 'brew pkg' doesn't handle this for you automatically. The
-#: '--identifier-prefix' option is strongly recommended in order to follow
-#: the conventions of OS X installer packages (Default 'org.homebrew').
+#:Build an OS X installer package from a formula. It must be already
+#:installed; 'brew pkg' doesn't handle this for you automatically. The
+#:'--identifier-prefix' option is strongly recommended in order to follow
+#:the conventions of OS X installer packages (Default 'org.homebrew').
 #:
-#: Options:
+#:Options:
 #:  --identifier-prefix     set a custom identifier prefix to be prepended
 #:                          to the built package's identifier, ie. 'org.nagios'
-#:                          makes a package identifier called 'org.nagios.nrpe'
+#:                          default package identifier is 'org.homebrew'
 #:  --with-deps             include all the package's dependencies in the build
 #:  --without-kegs          exclude contents at /usr/local/Cellar/packagename
 #:  --without-opt           exclude the link in /usr/local/opt
@@ -24,13 +24,13 @@ require 'formula'
 require 'formulary'
 require 'dependencies'
 require 'shellwords'
-require 'set'
+require "cli/parser"
 require 'cmd/deps'
 require 'optparse'
-require 'tmpdir'
 require 'ostruct'
-require "cli/parser"
 require "cleanup"
+require 'tmpdir'
+require 'set'
 require 'pp'
 
 module Homebrew

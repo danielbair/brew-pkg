@@ -6,8 +6,8 @@
 #:the conventions of OS X installer packages (Default 'org.homebrew').
 #:
 #:Options:
-#:  --identifier-prefix     set a custom identifier prefix to be prepended
-#:                          to the built package's identifier, ie. 'org.nagios'
+#:  --identifier-prefix     set a custom identifier prefix to be 
+#:                          prepended to the built package's identifier
 #:                          default package identifier is 'org.homebrew'
 #:  --with-deps             include all the package's dependencies in the build
 #:  --without-kegs          exclude contents at /usr/local/Cellar/packagename
@@ -18,7 +18,8 @@
 #:  --postinstall-script    custom postinstall script file
 #:  --scripts               custom preinstall and postinstall scripts folder
 #:  --pkgvers               set the version string in the resulting .pkg file
-#:  --debug                 print extra debug information
+#:  -d, --debug             print extra debug information
+#:  -h, --help              Show this message.
 
 require 'formula'
 require 'formulary'
@@ -49,8 +50,8 @@ module Homebrew
       the conventions of OS X installer packages (Default 'org.homebrew').
       EOS
       flag "--identifier-prefix=",
-             description: "set a custom identifier prefix to be prepended"\
-                          "to the built package's identifier, ie. 'org.nagios'"\
+             description: "set a custom identifier prefix to be"\
+                          "prepended to the built package's identifier"\
                           "default package identifier is 'org.homebrew'"
       switch "--with-deps",
              description: "include all the package's dependencies in the build"
@@ -116,6 +117,8 @@ module Homebrew
     if args.with_deps?
       odebug "DEBUG: --with-deps" if Homebrew.args.debug?
       pkgs += f.recursive_dependencies if args.with_deps?
+    else
+      odebug "DEBUG: without deps" if Homebrew.args.debug?
     end
 
     pkgs.each do |pkg|
@@ -138,18 +141,22 @@ module Homebrew
           end
         end
         # Add kegs if not specified --without-kegs
-        if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not args.without_kegs
-          odebug "DEBUG: --without-kegs" if Homebrew.args.debug?
+        if File.exists?("#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}") and not args.without_kegs?
+          odebug "DEBUG: with kegs" if Homebrew.args.debug?
           ohai "Staging directory #{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}"
           safe_system "mkdir", "-p", "#{staging_root}/Cellar/#{formula.name}/"
           safe_system "rsync", "-a", "#{HOMEBREW_CELLAR}/#{formula.name}/#{dep_version}", "#{staging_root}/Cellar/#{formula.name}/"
+	else
+          odebug "DEBUG: --without-kegs" if Homebrew.args.debug?
         end
         # Add opt dir if not specified --without-opt
-        if File.exists?("/usr/local/opt/#{formula.name}") and not args.without_opt and not args.without_kegs
-          odebug "DEBUG: --without-opt" if Homebrew.args.debug?
+        if File.exists?("/usr/local/opt/#{formula.name}") and not args.without_opt? and not args.without_kegs?
+          odebug "DEBUG: with opt" if Homebrew.args.debug?
           ohai "Staging link in #{staging_root}/opt"
           FileUtils.mkdir_p "#{staging_root}/opt"
           safe_system "rsync", "-a", "/usr/local/opt/#{formula.name}", "#{staging_root}/opt"
+	else
+          odebug "DEBUG: --without-opt" if Homebrew.args.debug?
         end
       end
 

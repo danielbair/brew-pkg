@@ -1,6 +1,6 @@
 # brew-pkg
 
-brew-pkg is a Homebrew external command that builds an OS X installer package from a formula. The formula must first already be installed on the system.
+brew-pkg is a Homebrew external command that builds an macOS installer package from a formula. The formula must first already be installed on the system.
 
 ## Usage
 
